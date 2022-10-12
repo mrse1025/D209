@@ -32,7 +32,7 @@ churn_cleaning <- function(data){
     mutate(
       across(
         where(is.factor),
-        ~fct_lump(.x,prop = 0.005)
+        ~forcats::fct_lump(.x, prop = 0.005)
       )
     ) %>%
     select(everything(), -starts_with("outlier"), -population, -job,-customer_id,-interaction,-city)
