@@ -49,5 +49,51 @@ churn_train <- training(splits)$churn
 test_data <- testing(splits) %>% select(-churn)
 churn_test <- testing(splits)$churn
 
+#Analysis, finding k, and determining accuracy
 
-knn(train = train_data,test = test_data,k = 5, cl = churn_train)
+#finding k
+k = 1:sqrt(nrow(train_data))
+accu_k = rep(x = 0, times= length(k))
+
+calc_class_acc  = function(actual, prediction) {
+  mean(actual == prediction)
+}
+
+#defining k = 8 and determining how accuracy 
+calc_class_acc(actual = churn_test, 
+               prediction = knn(train = train_data,
+                       test = test_data,
+                       k = 8, 
+                       cl = churn_train)
+)
+
+for (t in seq_along(k)) {
+  pred = knn(train = train_data,
+             test = test_data,
+             cl = churn_train,
+             k = k[t])
+  accu_k[t] = calc_class_acc(churn_train, pred)
+}
+
+plot(accu_k, type = "b", col = "red", 
+     xlab = "k neighbors", ylab = "Accuracy Rate", 
+     main = "(Test) Accuracy Rate for k = 1 to 81")
+
+abline(h = max(accu_k), col = "blue")
+
+best_k <- max(accu_k)
+
+final_knn <- knn(train = train_data,
+                 test = test_data,
+                 k = 68, 
+                 cl = churn_train)
+
+conf_matrix <- table(final_knn, churn_test)
+conf_matrix
+
+
+
+
+
+
+
