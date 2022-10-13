@@ -3,6 +3,7 @@ library(class)
 library(janitor)
 library(caret)
 library(tidymodels)
+library(pROC)
 source("cleaner_copy.R")
 
 churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
@@ -40,7 +41,7 @@ scaled_ds <- final_data_set %>%
       )
     )
 
-
+skimr::skim(scaled_ds)
 #setting seed and splitting into train/test. 
 set.seed(123)
 splits <- initial_split(scaled_ds)
@@ -83,17 +84,16 @@ abline(h = max(accu_k), col = "blue")
 
 best_k <- max(accu_k)
 
-final_knn <- knn(train = train_data,
+final_knn_prob <- knn(train = train_data,
                  test = test_data,
                  k = 68, 
-                 cl = churn_train)
+                 cl = churn_train,
+                 prob = TRUE)
 
-conf_matrix <- table(final_knn, churn_test)
+conf_matrix <- table(final_knn_prob, churn_test)
 conf_matrix
+summary(confusionMatrix(final_knn_prob))
 
 
-
-
-
-
-
+roc(final_knn_prob, attributes(final_knn_prob)$prob, plot = TRUE, legacy.axes = TRUE, percent = TRUE, 
+    xlab = "False Positive Percent", ylab = "True Positive Percent", print.auc = TRUE,print.auc.y = 95)
