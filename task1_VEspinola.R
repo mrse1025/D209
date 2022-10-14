@@ -1,8 +1,8 @@
 library(tidyr)
+library(tidymodels)
 library(class)
 library(janitor)
 library(caret)
-library(tidymodels)
 library(pROC)
 source("cleaner_copy.R")
 
@@ -19,6 +19,8 @@ one_hot_dummy <- dummyVars(
             select(where(is.factor) & !contains("churn"))
           )
   )
+
+
 dummy_df <- data.frame(
   predict(
     one_hot_dummy,
@@ -64,7 +66,7 @@ calc_class_acc  = function(actual, prediction) {
 calc_class_acc(actual = churn_test, 
                prediction = knn(train = train_data,
                        test = test_data,
-                       k = 8, 
+                       k = 81, 
                        cl = churn_train)
 )
 
@@ -73,7 +75,8 @@ for (t in seq_along(k)) {
              test = test_data,
              cl = churn_train,
              k = k[t])
-  accu_k[t] = calc_class_acc(churn_train, pred)
+  
+  accu_k[t] = calc_class_acc(churn_test, pred)
 }
 
 plot(accu_k, type = "b", col = "red", 
@@ -82,18 +85,16 @@ plot(accu_k, type = "b", col = "red",
 
 abline(h = max(accu_k), col = "blue")
 
-best_k <- max(accu_k)
-
+best_k = min(which(accu_k == max(accu_k)))
+best_k
 final_knn_prob <- knn(train = train_data,
                  test = test_data,
-                 k = 68, 
+                 k = 25, 
                  cl = churn_train,
                  prob = TRUE)
 
 conf_matrix <- table(final_knn_prob, churn_test)
 conf_matrix
-summary(confusionMatrix(final_knn_prob))
-
 
 roc(final_knn_prob, attributes(final_knn_prob)$prob, plot = TRUE, legacy.axes = TRUE, percent = TRUE, 
     xlab = "False Positive Percent", ylab = "True Positive Percent", print.auc = TRUE,print.auc.y = 95)

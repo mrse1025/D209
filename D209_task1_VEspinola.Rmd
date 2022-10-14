@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-###### A1. The anaylsis will either support or fail to support early outreach for customers that are favored to discontinue their services with their telecommunications provider.
+###### A1. The anaylsis will either support or fail to support early outreach and intervention for customers that are favored to discontinue their services with their telecommunications provider.
 
 ###### A2. The goal of the analysis is to determine what the cost-benefit is for customer retention; that is to say using the models accuracy in order to determine if early outreach is a feasible tool to implement based on liklihood of a customer's probability to discontinue services.   
 
@@ -25,7 +25,8 @@ knitr::opts_chunk$set(
 ###### B3. The following packages were used for this project. 
 
 ```{r, echo = TRUE}
-library(tidyr)  #This package is for tidying the data and making outputs more readable. 
+library(tidyr)  #This package is for tidying the data and making outputs more readable.
+library(tidymodels) #This package assists with train/test split.
 library(class) #This package supports the KNN algorithm. 
 library(janitor) #This package helps to prepare the data 
 library(caret) #This package helps to prepare the data by dummying each categorical data point
@@ -93,7 +94,7 @@ write.csv(scaled_ds, "scsled_ds.csv")
 
 ###### D1. The following is setting a seed to have reproducible results and has split the data into testing and training set. (DataCamp and Delpiaz)
 ```{r}
-set.seed(123)
+set.seed(123) #Seed is to maintain consistant results and will help keep tie breakers the same as tie breakers are random and not based on algorithm. 
 splits <- initial_split(scaled_ds)
 train_data <- training(splits) %>% select(-churn)
 churn_train <- training(splits)$churn
@@ -102,6 +103,8 @@ churn_test <- testing(splits)$churn
 ```
 
 ###### D2. The model will be assessed by its accuracy, first an appropriate value of k should be found. The following loop will take values between 1 and the square root of the number of values in the training set (Data Camp course)
+
+###### D3. The follow code shows the KNN technique starting with selecting the best value of k neighbors to consider. 
 ```{r, echo = TRUE}
 #Setting K value range
 k = 1:sqrt(nrow(train_data))
@@ -109,7 +112,7 @@ k = 1:sqrt(nrow(train_data))
 #Preparing to find accuracy for the loop 
 accu_k = rep(x = 0, times= length(k))
 
-#Accuracy will be calculated from when the actual and predicted values are the same. 
+#Accuracy function will be calculated from when the actual and predicted values are the same. 
 calc_class_acc  = function(actual, prediction) {
   mean(actual == prediction)
 }
@@ -120,25 +123,50 @@ for (t in seq_along(k)) {
              test = test_data,
              cl = churn_train,
              k = k[t])
-  accu_k[t] = calc_class_acc(churn_train, pred)
+  accu_k[t] = calc_class_acc(churn_test, pred)
 }
+```
+
+###### The following shows the accuracy of the model based on various k values. 
+```{r}
+plot(accu_k, type = "b", col = "red", 
+     xlab = "k neighbors", ylab = "Accuracy Rate", 
+     main = "(Test) Accuracy Rate for k = 1 to 81")
+
+abline(h = max(accu_k), col = "blue")
+```
+
+###### The graph shows that the model reaches its best accuracy between 20 and 40, this value is optimial since it will produce a model that will not be overfit. The following are the calculations used to determine the exact point location. 
+
+```{r}
+best_k = min(which(accu_k == max(accu_k))) #finding the first instance with the highest accuracy rate and lowest value of k. 
+best_k #prints values of k. 
+```
+
+###### The final KNN model is shown below. 
+```{r}
+final_knn_prob <- knn(train = train_data,
+                 test = test_data,
+                 k = 25, 
+                 cl = churn_train,
+                 prob = TRUE)
+```
+
+###### E1. The final classification model that has a k-value of 25 has an accuracy and AUC value is 84.67%. That means that the model misclassifies 15.33% of the data that it is given. 
+```{r}
+conf_matrix <- table(final_knn_prob, churn_test)
+conf_matrix
+
+roc(final_knn_prob, attributes(final_knn_prob)$prob, plot = TRUE, legacy.axes = TRUE, percent = TRUE, 
+    xlab = "False Positive Percent", ylab = "True Positive Percent", print.auc = TRUE,print.auc.y = 95)
 
 ```
 
+###### E2. The model incorrectly classifiies 15.33% of the data. Specifically, 371 customers were incorrectly classified, with the largest group being 331 customers. These customers were predicted not to churn, but actually did churn. Similarly, the other 40 customers that were misclassified were predicted to churn, but they did not. The KNN algorithm used from the class package did not allow for changing threshold values.  
 
+###### E3. One limitation of data analysis method is that since KNN is a computational method the algorithm can result in a tie when there is not a consenous vote for classification; ties are broken at random and that can cause some errors in classification. 
 
-
-
-
-
-
-
-
-
-
-
-
-
+###### E4. The question posed at the outset was to help stakeholder decide to implement early interventions to prevent customer churn; given the results of the data I support going forward with early intervention methods. Upon request further analysis should be considered with a change in threshold values to meet stakeholder goals. 
 
 
 ###### H. Acknowledgement and Citations
