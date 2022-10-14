@@ -1,0 +1,146 @@
+---
+title: "D209_task1_VEspinola"
+author: "Victoria Espinola"
+date: "2022-10-14"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning= FALSE}
+knitr::opts_chunk$set(
+    echo        = TRUE,
+    message     = F,
+    warning     = F,
+    paged.print = FALSE
+)
+```
+
+###### A1. The anaylsis will either support or fail to support early outreach for customers that are favored to discontinue their services with their telecommunications provider.
+
+###### A2. The goal of the analysis is to determine what the cost-benefit is for customer retention; that is to say using the models accuracy in order to determine if early outreach is a feasible tool to implement based on liklihood of a customer's probability to discontinue services.   
+
+###### B1. K nearest neighbor or KNN is an algorithm that classifies points based on known information that is near the unknown point. The method computes the distance between points to determine their similarity and then classify the unknown point. The outcome of this method for this project will be to determine how likely a customer is to discontinue service. 
+
+###### B2. One assumption of the KNN classification method is that all variables are in a numeric representation so that they can be used to calculate distance. 
+
+###### B3. The following packages were used for this project. 
+
+```{r, echo = TRUE}
+library(tidyr)  #This package is for tidying the data and making outputs more readable. 
+library(class) #This package supports the KNN algorithm. 
+library(janitor) #This package helps to prepare the data 
+library(caret) #This package helps to prepare the data by dummying each categorical data point
+library(pROC) #The package helps to create the ROC curve and calculate the AUC value
+source("cleaner_copy.R") #This is a cleaning script I wrote to clean the given data set. 
+```
+
+###### C1. One data processing goal is to eliminate outliers from the data set. Since KNN relies on distance, all outliers left in the data set heavily influence the predictions. 
+
+###### C2. The follow shows the initial data set being brought in and eliminate the uid, case_order, lat, lng, state, county, and time zone variables. The uid and case_order variables were selected for elimination because they create too much noise in the data and they are used primarily for identifying customers and not customer attributes or habits. Additionally, lat, lng, state, county, and time zone seemed redundant, so zip was kept in the final data set.
+
+```{r}
+churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
+  janitor::clean_names() %>%
+  churn_cleaning() %>%
+  select(-uid, -case_order, -lat, -lng, -state, -county,-time_zone)
+```
+
+###### The following is the summary statistic of each variable and identifies if the variable is continuous or categorical. 
+
+```{r}
+skimr::skim(churn_data)
+```
+
+###### C3. To preparre the data, first one-hot encoding was used for factor variables, the dummied variables were put into a new data frame and binded back column wise with numeric variables, and finally the non-dummied categorical variables were removed.  
+
+```{r, echo=TRUE}
+#Dummy variables using one-hot encoding. 
+one_hot_dummy <- dummyVars(
+  " ~.",
+  data = (churn_data %>%
+            select(where(is.factor) & !contains("churn")) #churn is not included in one-hot encoding since                                                               all non-dummied variables will be removed. 
+          )
+  )
+dummy_df <- data.frame(
+  predict(
+    one_hot_dummy,
+    newdata = (churn_data %>%
+                 select(where(is.factor) & !contains("churn")) #creates new df with dummied variables. 
+               )
+    )
+)
+
+final_data_set <- dummy_df %>% bind_cols(churn_data) %>% #put together numeric with dummied variables
+  select(!where(is.factor), churn)%>%  #remove all non-dummied variables 
+  janitor::clean_names() 
+
+
+#normalizing numeric data, makes scale between 0 and 1
+
+scaled_ds <- final_data_set %>% 
+    mutate(
+    across(where(is.numeric), ~(.x-min(.x))/(max(.x)-min(.x))
+      )
+    )
+
+```
+
+###### C4. The final data set as dummied variables and has been normalized. 
+```{r}
+skimr::skim(scaled_ds)
+
+write.csv(scaled_ds, "scsled_ds.csv")
+```
+
+###### D1. The following is setting a seed to have reproducible results and has split the data into testing and training set. (DataCamp and Delpiaz)
+```{r}
+set.seed(123)
+splits <- initial_split(scaled_ds)
+train_data <- training(splits) %>% select(-churn)
+churn_train <- training(splits)$churn
+test_data <- testing(splits) %>% select(-churn)
+churn_test <- testing(splits)$churn
+```
+
+###### D2. The model will be assessed by its accuracy, first an appropriate value of k should be found. The following loop will take values between 1 and the square root of the number of values in the training set (Data Camp course)
+```{r, echo = TRUE}
+#Setting K value range
+k = 1:sqrt(nrow(train_data))
+
+#Preparing to find accuracy for the loop 
+accu_k = rep(x = 0, times= length(k))
+
+#Accuracy will be calculated from when the actual and predicted values are the same. 
+calc_class_acc  = function(actual, prediction) {
+  mean(actual == prediction)
+}
+
+#Loop for determining the best k value, at which value is the accuracy the largest. 
+for (t in seq_along(k)) {
+  pred = knn(train = train_data,
+             test = test_data,
+             cl = churn_train,
+             k = k[t])
+  accu_k[t] = calc_class_acc(churn_train, pred)
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###### H. Acknowledgement and Citations
+###### 1. Brett Lantz. https://www.datacamp.com/users/sign_in?redirect=http%3A%2F%2Fapp.datacamp.com%2Flearn%2Fcourses%2Fsupervised-learning-in-r-classification
+###### 2. Dalpiaz, D. (2020, October 28). Chapter 12 k-Nearest Neighbors | R for Statistical Learning. Retrieved October 14, 2022, from https://daviddalpiaz.github.io/r4sl/knn-class.html
