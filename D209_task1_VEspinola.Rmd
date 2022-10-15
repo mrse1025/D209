@@ -1,5 +1,5 @@
 ---
-title: "D209_task1_VEspinola"
+title: "Mitigating Churn"
 author: "Victoria Espinola"
 date: "2022-10-14"
 output: html_document
@@ -14,15 +14,15 @@ knitr::opts_chunk$set(
 )
 ```
 
-###### A1. The anaylsis will either support or fail to support early outreach and intervention for customers that are favored to discontinue their services with their telecommunications provider.
+###### A1. According to the data dictionary churn rate can be has high as 25% per year and cost 10 times more to aquire new customers than it does to retain an existing customer. Stakeholders often try to mitigate the cost by early intervention aiming to retain existing customers. The k- nearest neighbor or KNN process uses a distance to calculate the probability that a customer will discontinue services based on a training model.  
 
-###### A2. The goal of the analysis is to determine what the cost-benefit is for customer retention; that is to say using the models accuracy in order to determine if early outreach is a feasible tool to implement based on liklihood of a customer's probability to discontinue services.   
+###### A2. The goal of the analysis is to determine if early intervention techniques can be implemented using a KNN analysis. The KNN model will show which groups are most at risk, those who are identified as churning and who are correctly predicted to churn as well as customers who are predicted to retain services but will actually churn. The feasbility of using the KNN model will be determined by the model accuracy. 
 
-###### B1. K nearest neighbor or KNN is an algorithm that classifies points based on known information that is near the unknown point. The method computes the distance between points to determine their similarity and then classify the unknown point. The outcome of this method for this project will be to determine how likely a customer is to discontinue service. 
+###### B1. K nearest neighbor or KNN is an algorithm that classifies an observation based on information from "nearby" observations. The algorithm calculates the nearness using the euclidean distance between observations. Once the nearest neighbors are found the majority class from the k nearest observations is used as the predicted class for the new observation.The outcome of this method will be used to determine which customers may churn. 
 
-###### B2. One assumption of the KNN classification method is that all variables are in a numeric representation so that they can be used to calculate distance. 
+###### B2. One assumption of the KNN classification method is that all variables are numeric so that they can be used to calculate distance. 
 
-###### B3. The following packages were used for this project. 
+###### B3. The following packages were used for this project and their justifications are given in the comments below. 
 
 ```{r, echo = TRUE}
 library(tidyr)  #This package is for tidying the data and making outputs more readable.
@@ -51,7 +51,7 @@ churn_data <- read.csv("churn_clean.csv", header = TRUE) %>%
 skimr::skim(churn_data)
 ```
 
-###### C3. To preparre the data, first one-hot encoding was used for factor variables, the dummied variables were put into a new data frame and binded back column wise with numeric variables, and finally the non-dummied categorical variables were removed.  
+###### C3. To prepare the data, first one-hot encoding was used for factor variables, the dummied variables were put into a new data frame and binded back column wise with numeric variables, and finally the non-dummied categorical variables were removed.  
 
 ```{r, echo=TRUE}
 #Dummy variables using one-hot encoding. 
@@ -89,12 +89,16 @@ scaled_ds <- final_data_set %>%
 ```{r}
 skimr::skim(scaled_ds)
 
-write.csv(scaled_ds, "scsled_ds.csv")
+write.csv(scaled_ds, "scaled_ds.csv")
 ```
 
 ###### D1. The following is setting a seed to have reproducible results and has split the data into testing and training set. (DataCamp and Delpiaz)
 ```{r}
 set.seed(123) #Seed is to maintain consistant results and will help keep tie breakers the same as tie breakers are random and not based on algorithm. 
+```
+
+
+```{r}
 splits <- initial_split(scaled_ds)
 train_data <- training(splits) %>% select(-churn)
 churn_train <- training(splits)$churn
@@ -147,12 +151,12 @@ best_k #prints values of k.
 ```{r}
 final_knn_prob <- knn(train = train_data,
                  test = test_data,
-                 k = 25, 
+                 k = 23, 
                  cl = churn_train,
                  prob = TRUE)
 ```
 
-###### E1. The final classification model that has a k-value of 25 has an accuracy and AUC value is 84.67%. That means that the model misclassifies 15.33% of the data that it is given. 
+###### E1. The final classification model that has a k-value of 23 has an accuracy and AUC value is 82.2%. That means that the model misclassifies 17.8% of the data that it is given. 
 ```{r}
 conf_matrix <- table(final_knn_prob, churn_test)
 conf_matrix
@@ -162,7 +166,7 @@ roc(final_knn_prob, attributes(final_knn_prob)$prob, plot = TRUE, legacy.axes = 
 
 ```
 
-###### E2. The model incorrectly classifiies 15.33% of the data. Specifically, 371 customers were incorrectly classified, with the largest group being 331 customers. These customers were predicted not to churn, but actually did churn. Similarly, the other 40 customers that were misclassified were predicted to churn, but they did not. The KNN algorithm used from the class package did not allow for changing threshold values.  
+###### E2. The model incorrectly classifiies 17.8% of the data. Specifically, 357 customers were incorrectly classified, with the largest group being 315 customers. These customers were predicted not to churn, but actually did churn. Similarly, the other 42 customers that were misclassified were predicted to churn, but they did not. The KNN algorithm used from the class package did not allow for changing threshold values.  
 
 ###### E3. One limitation of data analysis method is that since KNN is a computational method the algorithm can result in a tie when there is not a consenous vote for classification; ties are broken at random and that can cause some errors in classification. 
 
