@@ -1,7 +1,7 @@
 ---
 title: "Mitigating Churn"
 author: "Victoria Espinola"
-date: "2022-10-14"
+date: "2022-10-17"
 output: html_document
 ---
 
@@ -14,9 +14,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-###### A1. According to the data dictionary churn rate can be has high as 25% per year and cost 10 times more to aquire new customers than it does to retain an existing customer. Stakeholders often try to mitigate the cost by early intervention aiming to retain existing customers. The k- nearest neighbor or KNN process uses a distance to calculate the probability that a customer will discontinue services based on a training model.  
+###### A1. According to the data dictionary churn rate can be has high as 25% per year and cost 10 times more to aquire new customers than it does to retain an existing customer. Stakeholders often try to mitigate the cost by early intervention inncentive techniques aiming to retain existing customers. The k-nearest neighbor or KNN process uses Euclidean distance between an observation's k nearest neighbors to classify an observation as either a customer that will churn or be retained. 
 
-###### A2. The goal of the analysis is to determine if early intervention techniques can be implemented using a KNN analysis. The KNN model will show which groups are most at risk, those who are identified as churning and who are correctly predicted to churn as well as customers who are predicted to retain services but will actually churn. The feasbility of using the KNN model will be determined by the model accuracy. 
+###### A2. The goal of the analysis is to determine if we can get beat a baseline model accuracy of 73% ,obtained from predicting all customers were retained since 6564 customers were retained out of the 8950 observations remaining after cleaning. If this is the case the model can then be used for early intervention techniques such as financial incentives for customers that are predicted to churn or other intervention techniques chosen by the business stakeholders.
 
 ###### B1. K nearest neighbor or KNN is an algorithm that classifies an observation based on information from "nearby" observations. The algorithm calculates the nearness using the euclidean distance between observations. Once the nearest neighbors are found the majority class from the k nearest observations is used as the predicted class for the new observation.The outcome of this method will be used to determine which customers may churn. 
 
@@ -36,7 +36,7 @@ source("cleaner_copy.R") #This is a cleaning script I wrote to clean the given d
 
 ###### C1. One data processing goal is to eliminate outliers from the data set. Since KNN relies on distance, all outliers left in the data set heavily influence the predictions. 
 
-###### C2. The follow shows the initial data set being brought in and eliminate the uid, case_order, lat, lng, state, county, and time zone variables. The uid and case_order variables were selected for elimination because they create too much noise in the data and they are used primarily for identifying customers and not customer attributes or habits. Additionally, lat, lng, state, county, and time zone seemed redundant, so zip was kept in the final data set.
+###### C2. The following shows the initial data set being brought in and eliminates the uid, case_order, lat, lng, state, county, and time zone variables. The uid and case_order variables were selected for elimination because they are used primarily for identifying customers and not customer attributes or habits. Additionally, lat, lng, state, county, and time zone seemed redundant, so zip was kept in the final data set.
 
 ```{r}
 churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
@@ -85,14 +85,14 @@ scaled_ds <- final_data_set %>%
 
 ```
 
-###### C4. The final data set as dummied variables and has been normalized. 
+###### C4. The final data set has been normalized and dummy variables have categorical features have been one hot encoded. 
 ```{r}
 skimr::skim(scaled_ds)
 
-write.csv(scaled_ds, "scaled_ds.csv")
+#write.csv(scaled_ds, "scaled_ds.csv")
 ```
 
-###### D1. The following is setting a seed to have reproducible results and has split the data into testing and training set. (DataCamp and Delpiaz)
+###### D1. The following is setting a seed to have reproducible results and will split the data into testing and training set. (DataCamp and Delpiaz)
 ```{r}
 set.seed(123) #Seed is to maintain consistant results and will help keep tie breakers the same as tie breakers are random and not based on algorithm. 
 ```
@@ -106,9 +106,15 @@ test_data <- testing(splits) %>% select(-churn)
 churn_test <- testing(splits)$churn
 ```
 
-###### D2. The model will be assessed by its accuracy, first an appropriate value of k should be found. The following loop will take values between 1 and the square root of the number of values in the training set (Data Camp course)
+```{r}
+#code that writes the csv for final submission. 
+#write.csv(training(splits), "train_data.csv")
+#write.csv(testing(splits), "test_data.csv")
+```
 
-###### D3. The follow code shows the KNN technique starting with selecting the best value of k neighbors to consider. 
+###### D2. The model will be assessed by its accuracy but first an appropriate value of k should be found. The following loop will take values between 1 and the square root of the number of values in the training set (DataCamp course)
+
+###### D3. The follow code shows the KNN technique starting with selecting the best value of k neighbors to consider based on accuracy. 
 ```{r, echo = TRUE}
 #Setting K value range
 k = 1:sqrt(nrow(train_data))
@@ -147,7 +153,7 @@ best_k = min(which(accu_k == max(accu_k))) #finding the first instance with the 
 best_k #prints values of k. 
 ```
 
-###### The final KNN model is shown below. 
+###### The final KNN model is shown below using the k value of 23. 
 ```{r}
 final_knn_prob <- knn(train = train_data,
                  test = test_data,
@@ -156,7 +162,7 @@ final_knn_prob <- knn(train = train_data,
                  prob = TRUE)
 ```
 
-###### E1. The final classification model that has a k-value of 23 has an accuracy and AUC value is 82.2%. That means that the model misclassifies 17.8% of the data that it is given. 
+###### E1. The final classification model that has a k-value of 23 has an accuracy of 84% and AUC value is 82.2%. That means that the model misclassifies 16% of the data that it is given. 
 ```{r}
 conf_matrix <- table(final_knn_prob, churn_test)
 conf_matrix
@@ -166,12 +172,11 @@ roc(final_knn_prob, attributes(final_knn_prob)$prob, plot = TRUE, legacy.axes = 
 
 ```
 
-###### E2. The model incorrectly classifiies 17.8% of the data. Specifically, 357 customers were incorrectly classified, with the largest group being 315 customers. These customers were predicted not to churn, but actually did churn. Similarly, the other 42 customers that were misclassified were predicted to churn, but they did not. The KNN algorithm used from the class package did not allow for changing threshold values.  
+###### E2. The model incorrectly classifiies 16% of the data. Specifically, 357 customers were incorrectly classified, with the largest group being 315 customers that were predicted not to churn, but actually did churn. Similarly, the other 42 customers that were misclassified were predicted to churn, but they did not. The KNN algorithm used from the class package did not allow for the distance metric used so a different metric may lead to better results. 
 
-###### E3. One limitation of data analysis method is that since KNN is a computational method the algorithm can result in a tie when there is not a consenous vote for classification; ties are broken at random and that can cause some errors in classification. 
+###### E3. One limitation of my data analysis method is that the data is skewed and has more observations of customers who do not churn compared to customers who do churn. A follow up model should include a resampling technique that will help even out the skewed data and may lead to better predictions. 
 
-###### E4. The question posed at the outset was to help stakeholder decide to implement early interventions to prevent customer churn; given the results of the data I support going forward with early intervention methods. Upon request further analysis should be considered with a change in threshold values to meet stakeholder goals. 
-
+###### E4. The purpose of the analysis was to help stakeholders decide whether to move forward with implementing a model that would improve churn prediction accuracy. Since our model accuracy is 84%, better than the 73% accuracy of the baseline model that comes from predicting all customers wil stay, the model could prove useful in helping the business in their identification of churning customers and implementation of an intervention program.
 
 ###### H. Acknowledgement and Citations
 ###### 1. Brett Lantz. https://www.datacamp.com/users/sign_in?redirect=http%3A%2F%2Fapp.datacamp.com%2Flearn%2Fcourses%2Fsupervised-learning-in-r-classification

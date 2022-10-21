@@ -11,7 +11,7 @@
 
 <meta name="author" content="Victoria Espinola" />
 
-<meta name="date" content="2022-10-14" />
+<meta name="date" content="2022-10-17" />
 
 <title>Mitigating Churn</title>
 
@@ -352,27 +352,28 @@ display: none;
 
 <h1 class="title toc-ignore">Mitigating Churn</h1>
 <h4 class="author">Victoria Espinola</h4>
-<h4 class="date">2022-10-14</h4>
+<h4 class="date">2022-10-17</h4>
 
 </div>
 
 
-<div id="a1.-according-to-the-data-dictionary-churn-rate-can-be-has-high-as-25-per-year-and-cost-10-times-more-to-aquire-new-customers-than-it-does-to-retain-an-existing-customer.-stakeholders-often-try-to-mitigate-the-cost-by-early-intervention-aiming-to-retain-existing-customers.-the-k--nearest-neighbor-or-knn-process-uses-a-distance-to-calculate-the-probability-that-a-customer-will-discontinue-services-based-on-a-training-model." class="section level6">
+<div id="a1.-according-to-the-data-dictionary-churn-rate-can-be-has-high-as-25-per-year-and-cost-10-times-more-to-aquire-new-customers-than-it-does-to-retain-an-existing-customer.-stakeholders-often-try-to-mitigate-the-cost-by-early-intervention-inncentive-techniques-aiming-to-retain-existing-customers.-the-k-nearest-neighbor-or-knn-process-uses-euclidean-distance-between-an-observations-k-nearest-neighbors-to-classify-an-observation-as-either-a-customer-that-will-churn-or-be-retained." class="section level6">
 <h6>A1. According to the data dictionary churn rate can be has high as
 25% per year and cost 10 times more to aquire new customers than it does
 to retain an existing customer. Stakeholders often try to mitigate the
-cost by early intervention aiming to retain existing customers. The k-
-nearest neighbor or KNN process uses a distance to calculate the
-probability that a customer will discontinue services based on a
-training model.</h6>
+cost by early intervention inncentive techniques aiming to retain
+existing customers. The k-nearest neighbor or KNN process uses Euclidean
+distance between an observation’s k nearest neighbors to classify an
+observation as either a customer that will churn or be retained.</h6>
 </div>
-<div id="a2.-the-goal-of-the-analysis-is-to-determine-if-early-intervention-techniques-can-be-implemented-using-a-knn-analysis.-the-knn-model-will-show-which-groups-are-most-at-risk-those-who-are-identified-as-churning-and-who-are-correctly-predicted-to-churn-as-well-as-customers-who-are-predicted-to-retain-services-but-will-actually-churn.-the-feasbility-of-using-the-knn-model-will-be-determined-by-the-model-accuracy." class="section level6">
-<h6>A2. The goal of the analysis is to determine if early intervention
-techniques can be implemented using a KNN analysis. The KNN model will
-show which groups are most at risk, those who are identified as churning
-and who are correctly predicted to churn as well as customers who are
-predicted to retain services but will actually churn. The feasbility of
-using the KNN model will be determined by the model accuracy.</h6>
+<div id="a2.-the-goal-of-the-analysis-is-to-determine-if-we-can-get-beat-a-baseline-model-accuracy-of-73-obtained-from-predicting-all-customers-were-retained-since-6564-customers-were-retained-out-of-the-8950-observations-remaining-after-cleaning.-if-this-is-the-case-the-model-can-then-be-used-for-early-intervention-techniques-such-as-financial-incentives-for-customers-that-are-predicted-to-churn-or-other-intervention-techniques-chosen-by-the-business-stakeholders." class="section level6">
+<h6>A2. The goal of the analysis is to determine if we can get beat a
+baseline model accuracy of 73% ,obtained from predicting all customers
+were retained since 6564 customers were retained out of the 8950
+observations remaining after cleaning. If this is the case the model can
+then be used for early intervention techniques such as financial
+incentives for customers that are predicted to churn or other
+intervention techniques chosen by the business stakeholders.</h6>
 </div>
 <div id="b1.-k-nearest-neighbor-or-knn-is-an-algorithm-that-classifies-an-observation-based-on-information-from-nearby-observations.-the-algorithm-calculates-the-nearness-using-the-euclidean-distance-between-observations.-once-the-nearest-neighbors-are-found-the-majority-class-from-the-k-nearest-observations-is-used-as-the-predicted-class-for-the-new-observation.the-outcome-of-this-method-will-be-used-to-determine-which-customers-may-churn." class="section level6">
 <h6>B1. K nearest neighbor or KNN is an algorithm that classifies an
@@ -404,14 +405,14 @@ source(&quot;cleaner_copy.R&quot;) #This is a cleaning script I wrote to clean t
 set. Since KNN relies on distance, all outliers left in the data set
 heavily influence the predictions.</h6>
 </div>
-<div id="c2.-the-follow-shows-the-initial-data-set-being-brought-in-and-eliminate-the-uid-case_order-lat-lng-state-county-and-time-zone-variables.-the-uid-and-case_order-variables-were-selected-for-elimination-because-they-create-too-much-noise-in-the-data-and-they-are-used-primarily-for-identifying-customers-and-not-customer-attributes-or-habits.-additionally-lat-lng-state-county-and-time-zone-seemed-redundant-so-zip-was-kept-in-the-final-data-set." class="section level6">
-<h6>C2. The follow shows the initial data set being brought in and
-eliminate the uid, case_order, lat, lng, state, county, and time zone
+<div id="c2.-the-following-shows-the-initial-data-set-being-brought-in-and-eliminates-the-uid-case_order-lat-lng-state-county-and-time-zone-variables.-the-uid-and-case_order-variables-were-selected-for-elimination-because-they-are-used-primarily-for-identifying-customers-and-not-customer-attributes-or-habits.-additionally-lat-lng-state-county-and-time-zone-seemed-redundant-so-zip-was-kept-in-the-final-data-set." class="section level6">
+<h6>C2. The following shows the initial data set being brought in and
+eliminates the uid, case_order, lat, lng, state, county, and time zone
 variables. The uid and case_order variables were selected for
-elimination because they create too much noise in the data and they are
-used primarily for identifying customers and not customer attributes or
-habits. Additionally, lat, lng, state, county, and time zone seemed
-redundant, so zip was kept in the final data set.</h6>
+elimination because they are used primarily for identifying customers
+and not customer attributes or habits. Additionally, lat, lng, state,
+county, and time zone seemed redundant, so zip was kept in the final
+data set.</h6>
 <pre class="r"><code>churn_data &lt;- read.csv(&quot;churn_clean.csv&quot;, header = TRUE) %&gt;% 
   janitor::clean_names() %&gt;%
   churn_cleaning() %&gt;%
@@ -918,8 +919,8 @@ identifies if the variable is continuous or categorical.</h6>
 </tbody>
 </table>
 </div>
-<div id="c3.-to-preparre-the-data-first-one-hot-encoding-was-used-for-factor-variables-the-dummied-variables-were-put-into-a-new-data-frame-and-binded-back-column-wise-with-numeric-variables-and-finally-the-non-dummied-categorical-variables-were-removed." class="section level6">
-<h6>C3. To preparre the data, first one-hot encoding was used for factor
+<div id="c3.-to-prepare-the-data-first-one-hot-encoding-was-used-for-factor-variables-the-dummied-variables-were-put-into-a-new-data-frame-and-binded-back-column-wise-with-numeric-variables-and-finally-the-non-dummied-categorical-variables-were-removed." class="section level6">
+<h6>C3. To prepare the data, first one-hot encoding was used for factor
 variables, the dummied variables were put into a new data frame and
 binded back column wise with numeric variables, and finally the
 non-dummied categorical variables were removed.</h6>
@@ -952,9 +953,9 @@ scaled_ds &lt;- final_data_set %&gt;%
       )
     )</code></pre>
 </div>
-<div id="c4.-the-final-data-set-as-dummied-variables-and-has-been-normalized." class="section level6">
-<h6>C4. The final data set as dummied variables and has been
-normalized.</h6>
+<div id="c4.-the-final-data-set-has-been-normalized-and-dummy-variables-have-categorical-features-have-been-one-hot-encoded." class="section level6">
+<h6>C4. The final data set has been normalized and dummy variables have
+categorical features have been one hot encoded.</h6>
 <pre class="r"><code>skimr::skim(scaled_ds)</code></pre>
 <table>
 <caption>Data summary</caption>
@@ -1893,11 +1894,11 @@ normalized.</h6>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>write.csv(scaled_ds, &quot;scaled_ds.csv&quot;)</code></pre>
+<pre class="r"><code>#write.csv(scaled_ds, &quot;scaled_ds.csv&quot;)</code></pre>
 </div>
-<div id="d1.-the-following-is-setting-a-seed-to-have-reproducible-results-and-has-split-the-data-into-testing-and-training-set.-datacamp-and-delpiaz" class="section level6">
+<div id="d1.-the-following-is-setting-a-seed-to-have-reproducible-results-and-will-split-the-data-into-testing-and-training-set.-datacamp-and-delpiaz" class="section level6">
 <h6>D1. The following is setting a seed to have reproducible results and
-has split the data into testing and training set. (DataCamp and
+will split the data into testing and training set. (DataCamp and
 Delpiaz)</h6>
 <pre class="r"><code>set.seed(123) #Seed is to maintain consistant results and will help keep tie breakers the same as tie breakers are random and not based on algorithm. </code></pre>
 <pre class="r"><code>splits &lt;- initial_split(scaled_ds)
@@ -1905,16 +1906,19 @@ train_data &lt;- training(splits) %&gt;% select(-churn)
 churn_train &lt;- training(splits)$churn
 test_data &lt;- testing(splits) %&gt;% select(-churn)
 churn_test &lt;- testing(splits)$churn</code></pre>
+<pre class="r"><code>#code that writes the csv for final submission. 
+#write.csv(training(splits), &quot;train_data.csv&quot;)
+#write.csv(testing(splits), &quot;test_data.csv&quot;)</code></pre>
 </div>
-<div id="d2.-the-model-will-be-assessed-by-its-accuracy-first-an-appropriate-value-of-k-should-be-found.-the-following-loop-will-take-values-between-1-and-the-square-root-of-the-number-of-values-in-the-training-set-data-camp-course" class="section level6">
-<h6>D2. The model will be assessed by its accuracy, first an appropriate
-value of k should be found. The following loop will take values between
-1 and the square root of the number of values in the training set (Data
-Camp course)</h6>
+<div id="d2.-the-model-will-be-assessed-by-its-accuracy-but-first-an-appropriate-value-of-k-should-be-found.-the-following-loop-will-take-values-between-1-and-the-square-root-of-the-number-of-values-in-the-training-set-datacamp-course" class="section level6">
+<h6>D2. The model will be assessed by its accuracy but first an
+appropriate value of k should be found. The following loop will take
+values between 1 and the square root of the number of values in the
+training set (DataCamp course)</h6>
 </div>
-<div id="d3.-the-follow-code-shows-the-knn-technique-starting-with-selecting-the-best-value-of-k-neighbors-to-consider." class="section level6">
+<div id="d3.-the-follow-code-shows-the-knn-technique-starting-with-selecting-the-best-value-of-k-neighbors-to-consider-based-on-accuracy." class="section level6">
 <h6>D3. The follow code shows the KNN technique starting with selecting
-the best value of k neighbors to consider.</h6>
+the best value of k neighbors to consider based on accuracy.</h6>
 <pre class="r"><code>#Setting K value range
 k = 1:sqrt(nrow(train_data))
 
@@ -1954,18 +1958,18 @@ exact point location.</h6>
 best_k #prints values of k. </code></pre>
 <pre><code>## [1] 23</code></pre>
 </div>
-<div id="the-final-knn-model-is-shown-below." class="section level6">
-<h6>The final KNN model is shown below.</h6>
+<div id="the-final-knn-model-is-shown-below-using-the-k-value-of-23." class="section level6">
+<h6>The final KNN model is shown below using the k value of 23.</h6>
 <pre class="r"><code>final_knn_prob &lt;- knn(train = train_data,
                  test = test_data,
                  k = 23, 
                  cl = churn_train,
                  prob = TRUE)</code></pre>
 </div>
-<div id="e1.-the-final-classification-model-that-has-a-k-value-of-23-has-an-accuracy-and-auc-value-is-82.2.-that-means-that-the-model-misclassifies-17.8-of-the-data-that-it-is-given." class="section level6">
+<div id="e1.-the-final-classification-model-that-has-a-k-value-of-23-has-an-accuracy-of-84-and-auc-value-is-82.2.-that-means-that-the-model-misclassifies-16-of-the-data-that-it-is-given." class="section level6">
 <h6>E1. The final classification model that has a k-value of 23 has an
-accuracy and AUC value is 82.2%. That means that the model misclassifies
-17.8% of the data that it is given.</h6>
+accuracy of 84% and AUC value is 82.2%. That means that the model
+misclassifies 16% of the data that it is given.</h6>
 <pre class="r"><code>conf_matrix &lt;- table(final_knn_prob, churn_test)
 conf_matrix</code></pre>
 <pre><code>##               churn_test
@@ -1982,27 +1986,30 @@ conf_matrix</code></pre>
 ## Data: attributes(final_knn_prob)$prob in 1928 controls (final_knn_prob No) &gt; 310 cases (final_knn_prob Yes).
 ## Area under the curve: 82.24%</code></pre>
 </div>
-<div id="e2.-the-model-incorrectly-classifiies-17.8-of-the-data.-specifically-357-customers-were-incorrectly-classified-with-the-largest-group-being-315-customers.-these-customers-were-predicted-not-to-churn-but-actually-did-churn.-similarly-the-other-42-customers-that-were-misclassified-were-predicted-to-churn-but-they-did-not.-the-knn-algorithm-used-from-the-class-package-did-not-allow-for-changing-threshold-values." class="section level6">
-<h6>E2. The model incorrectly classifiies 17.8% of the data.
-Specifically, 357 customers were incorrectly classified, with the
-largest group being 315 customers. These customers were predicted not to
-churn, but actually did churn. Similarly, the other 42 customers that
-were misclassified were predicted to churn, but they did not. The KNN
-algorithm used from the class package did not allow for changing
-threshold values.</h6>
+<div id="e2.-the-model-incorrectly-classifiies-16-of-the-data.-specifically-357-customers-were-incorrectly-classified-with-the-largest-group-being-315-customers-that-were-predicted-not-to-churn-but-actually-did-churn.-similarly-the-other-42-customers-that-were-misclassified-were-predicted-to-churn-but-they-did-not.-the-knn-algorithm-used-from-the-class-package-did-not-allow-for-the-distance-metric-used-so-a-different-metric-may-lead-to-better-results." class="section level6">
+<h6>E2. The model incorrectly classifiies 16% of the data. Specifically,
+357 customers were incorrectly classified, with the largest group being
+315 customers that were predicted not to churn, but actually did churn.
+Similarly, the other 42 customers that were misclassified were predicted
+to churn, but they did not. The KNN algorithm used from the class
+package did not allow for the distance metric used so a different metric
+may lead to better results.</h6>
 </div>
-<div id="e3.-one-limitation-of-data-analysis-method-is-that-since-knn-is-a-computational-method-the-algorithm-can-result-in-a-tie-when-there-is-not-a-consenous-vote-for-classification-ties-are-broken-at-random-and-that-can-cause-some-errors-in-classification." class="section level6">
-<h6>E3. One limitation of data analysis method is that since KNN is a
-computational method the algorithm can result in a tie when there is not
-a consenous vote for classification; ties are broken at random and that
-can cause some errors in classification.</h6>
+<div id="e3.-one-limitation-of-my-data-analysis-method-is-that-the-data-is-skewed-and-has-more-observations-of-customers-who-do-not-churn-compared-to-customers-who-do-churn.-a-follow-up-model-should-include-a-resampling-technique-that-will-help-even-out-the-skewed-data-and-may-lead-to-better-predictions." class="section level6">
+<h6>E3. One limitation of my data analysis method is that the data is
+skewed and has more observations of customers who do not churn compared
+to customers who do churn. A follow up model should include a resampling
+technique that will help even out the skewed data and may lead to better
+predictions.</h6>
 </div>
-<div id="e4.-the-question-posed-at-the-outset-was-to-help-stakeholder-decide-to-implement-early-interventions-to-prevent-customer-churn-given-the-results-of-the-data-i-support-going-forward-with-early-intervention-methods.-upon-request-further-analysis-should-be-considered-with-a-change-in-threshold-values-to-meet-stakeholder-goals." class="section level6">
-<h6>E4. The question posed at the outset was to help stakeholder decide
-to implement early interventions to prevent customer churn; given the
-results of the data I support going forward with early intervention
-methods. Upon request further analysis should be considered with a
-change in threshold values to meet stakeholder goals.</h6>
+<div id="e4.-the-purpose-of-the-analysis-was-to-help-stakeholders-decide-whether-to-move-forward-with-implementing-a-model-that-would-improve-churn-prediction-accuracy.-since-our-model-accuracy-is-84-better-than-the-73-accuracy-of-the-baseline-model-that-comes-from-predicting-all-customers-wil-stay-the-model-could-prove-useful-in-helping-the-business-in-their-identification-of-churning-customers-and-implementation-of-an-intervention-program." class="section level6">
+<h6>E4. The purpose of the analysis was to help stakeholders decide
+whether to move forward with implementing a model that would improve
+churn prediction accuracy. Since our model accuracy is 84%, better than
+the 73% accuracy of the baseline model that comes from predicting all
+customers wil stay, the model could prove useful in helping the business
+in their identification of churning customers and implementation of an
+intervention program.</h6>
 </div>
 <div id="h.-acknowledgement-and-citations" class="section level6">
 <h6>H. Acknowledgement and Citations</h6>
