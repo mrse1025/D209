@@ -13,12 +13,15 @@ knitr::opts_chunk$set(
     paged.print = FALSE
 )
 ```
+###### A1. According to the churn dictionary, the churn rate for telecommunications customers can be as high as 25% per year and can cost up to 10 times as much to acquire a new customers than retain an existing customer. A KNN model was applied to the customer churn data set in task one and had an accuracy rate of 84% of the churn. While this anaylsis was enough to support moving forward with early intervention to retain at risk customers, this analysis will seek to improve upon this classification analysis by appling a random forest model.
 
-## R Markdown
+###### A2. The goal of this analysis is to improve upon the KNN model and find an appropriate random forest model that will have a better accuracy than the KNN model. If the random forest model improves in its accuracy, then this model will be given to stakeholders to isolate target customers for intervention. 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+###### B1. A random forest method trains a model based on the training set that has been subsetted. The collection of models is then put together as an ensemble and the weaker models are able to learing from stronger model that classify the data more accurately.  One way to improve the ensemble is to include hyperparameter tuning methods so that the model can improve on its classification accuracy. It is expected that the random forest will perform better then the KNN model since it has a bootstrapping method that will use a majority vote from many models and not a majority vote from similary points as seen with KNN models.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+###### B2. One assumption of the random forest method is that low variance variables are removed to avoid overfitting the model. 
+
+###### B3. The libaries used for this analysis are listed below with comments on how they are used in the anaylsis.  
 
 ```{r cars}
 summary(cars)
