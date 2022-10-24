@@ -19,20 +19,128 @@ knitr::opts_chunk$set(
 
 ###### B1. A random forest method trains a model based on the training set that has been subsetted. The collection of models is then put together as an ensemble and the weaker models are able to learing from stronger model that classify the data more accurately.  One way to improve the ensemble is to include hyperparameter tuning methods so that the model can improve on its classification accuracy. It is expected that the random forest will perform better then the KNN model since it has a bootstrapping method that will use a majority vote from many models and not a majority vote from similary points as seen with KNN models.
 
-###### B2. One assumption of the random forest method is that low variance variables are removed to avoid overfitting the model. 
+###### B2. One assumption of the random forest method is that low variance variables need to be removed to avoid overfitting the model. 
 
 ###### B3. The libaries used for this analysis are listed below with comments on how they are used in the anaylsis.  
 
-```{r cars}
-summary(cars)
+```{r}
+library(tidyverse)
+library(tidymodels)
+source("cleaner_copy.R")
 ```
 
-## Including Plots
+###### C1. In order to use the randmon forest method for classification, the data must have all low variance variables removed, so that the model will not overfit the data. While tree models are robust to outliers and can model non-linear data, these characteristics left in the data can increase the likilhood of overfitting the data as the model tend to learn the noise within the data set. Therefore the three main goals of the preparation are 1) removing all low variance variables, 2) normalize the observations using a log transform, and 3) dummy nominal variables using one-hot encoding. 
 
-You can also embed plots, for example:
+###### C2. In the following chunk of code, the data is brought in, a seed is created for reproducibility, the data is split into training and testing set, and finally the data preparation steps are defined. The main goal of this preparation is to removed the low variance observations that are highly sparse and unbalanced. 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+###### C3. The code below shows the steps for data preparation, the comments annotates what is being completed in each step. 
+
+```{r, echo=TRUE}
+churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
+  janitor::clean_names() %>%
+  churn_cleaning()
+
+# Create training and testing splits ----
+set.seed(123)
+splits <- initial_split(churn_data, prop = 0.80)
+
+train_churn <- training(splits)
+test_churn  <- testing(splits)
+
+
+# Create feature engineering recipe for initial model ----
+recipe_spec <- recipe(churn ~., data = train_churn ) %>%
+  #impute the missing variables with the mean
+  step_impute_mean(all_numeric_predictors()) %>%  
+  #removed any identification variables that do not add insight into the classification model.
+  step_rm(county, state, time_zone, lat, lng, zip) %>% 
+  #removed all no variance variable from all predictors 
+  step_nzv(all_predictors())%>%
+  #group together all nominal predictors into an other category when they are retained from low variance, 
+  #but account for 0.5% of the data
+  step_other(all_nominal_predictors(),threshold = 0.005) %>%
+  #normalize the numeric data with a log transform; this step is important to reduce any outliers in the data set. 
+  step_log(all_numeric_predictors(),offset = 1) %>%
+  #dummy the nominal predictors with one-hot encoding method 
+  step_dummy(all_nominal_predictors(), one_hot = TRUE, keep_original_cols = FALSE) 
+
+prepped_data <- recipe_spec %>% prep() %>% bake(new_data = churn_data) %>% janitor::clean_names()
+skimr::skim(prepped_data)
+```
+###### C4. The code below shows the script for creating the csv file to be uploaded for the final submission. 
+```{r}
+write.csv(prepped_data, "prepped_data.csv" )
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+###### D1. The code below applies the preparation reciepe steps to the split data and outputs the new preppred_train and prepped_test data sets that will be used for analysis.
+
+```{r}
+# Prep data, clean the names
+prepped_train_data <- recipe_spec %>% prep() %>% bake(new_data = train_churn) %>% janitor::clean_names()
+prepped_test_data <- recipe_spec %>% prep() %>% bake(new_data = test_churn) %>% janitor::clean_names()
+```
+
+###### Now the prepped data will be writen as CSV files for attachment to the final submission. 
+
+```{r}
+#Save prepped data as CSV
+write.csv(prepped_train_data, "prepped_train_data.csv" )
+write.csv(prepped_test_data, "prepped_test_data.csv")
+```
+
+###### D2. 
+
+```{r}
+rand_forest_spec <- rand_forest(
+                  mtry  = tune(), 
+                  trees = tune(), 
+                  min_n = tune()
+              ) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+set.seed(123)
+
+tree_folds <- vfold_cv(data = prepped_train_data, v = 2)
+#set up tuning grid
+
+
+test_grid <- tidyr::crossing(
+  mtry  = c(2,10), 
+  trees = c(100,1000),
+  min_n = c(1,5)
+)
+
+set.seed(123)
+
+tune_results <- tune_grid(rand_forest_spec, 
+                          churn ~. , 
+                          resamples = tree_folds,
+                          grid      = test_grid,
+                          metrics   = metric_set(accuracy)
+                          )
+
+autoplot(tune_results)
+
+
+best_tunes <- select_best(tune_results)
+best_spec <- finalize_model(rand_forest_spec, best_tunes)
+
+```
+
+```{r}
+set.seed(123)
+
+#Fitting the model 
+final_model <- fit(best_spec, 
+                   churn ~., 
+                   prepped_train_data
+                   )
+
+pred_test <- predict(final_model, new_data = prepped_test_data,type ="class")
+```
+
+```{r}
+
+```
+

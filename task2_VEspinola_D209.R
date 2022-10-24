@@ -8,94 +8,88 @@ source("cleaner_copy.R")
 
 churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
   janitor::clean_names() %>%
-  churn_cleaning() %>%
-  select(-uid, -case_order, -lat, -lng, -state, -county,-time_zone)
+  churn_cleaning() 
+#recipe goes here
+# Create training and testing splits ----
+set.seed(123)
+splits <- initial_split(churn_data, prop = 0.80)
+
+train_churn <- training(splits)
+test_churn  <- testing(splits)
+
+
+# Create feature engineering recipe for initial model ----
+recipe_spec <- recipe(churn ~., data = train_churn ) %>%
+  #impute the missing variables with the mean
+  step_impute_mean(all_numeric_predictors()) %>%  
+  #removed any identification variables that do not add insight into the classification model.
+  step_rm(county, state, time_zone, lat, lng, zip) %>% 
+  #removed all no variance variable from all predictors 
+  step_nzv(all_predictors())%>%
+  #group together all nominal predictors into an other category when they are retained from low variance, 
+  #but account for 0.5% of the data
+  step_other(all_nominal_predictors(),threshold = 0.005) %>%
+  #normalize the numeric data with a log transform; this step is important to reduce any outliers in the data set. 
+  step_log(all_numeric_predictors(),offset = 1)
+  #dummy the nominal predictors with one-hot encoding method 
+  #step_dummy(all_nominal_predictors(), one_hot = TRUE, keep_original_cols = FALSE) 
+
+#Full_prepped_data
+prepped_data <- recipe_spec %>% prep() %>% bake(new_data = churn_data) %>% janitor::clean_names()
+skimr::skim(prepped_data)
+
+#Modeling
+rand_forest_spec <- rand_forest(
+  mtry  = tune(), 
+  trees = tune(), 
+  min_n = tune()
+) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
 
 set.seed(123)
 
-splits <- initial_split(
-                        churn_data,
-                        prop   = .80,
-                        strata = churn
-                        )
-
-train_tbl <- training(splits)
-test_tbl <- testing(splits)
-
-#recipe goes here
-
-
-
-#tuning 
-#dummy specs 
-
-tune_spec <- decision_tree(
-  tree_depth = tune (), 
-  cost_complexity = tune()
-) %>%
-  set_mode("classification") %>%
-  set_engine("rpart")
-
+tree_folds <- vfold_cv(data = train_churn, v = 2)
 #set up tuning grid
 
-model_grid <- grid_regular(
-  parameters(tune_spec), 
-  levels = 5
+
+test_grid <- tidyr::crossing(
+  mtry  = 1:10, 
+  trees = seq(100,1000,100),
+  min_n = seq(1,5,1)
 )
 
-folds <- vfold_cv(train_tbl, v = 10)
+set.seed(123)
 
-tune_results <- tune_grid(tune_spec, 
-                          churn ~. , 
-                          resamples = folds,
-                          grid      = model_grid,
+tune_results <- tune_grid(rand_forest_spec, 
+                          recipe_spec,
+                          resamples = tree_folds,
+                          grid      = test_grid,
                           metrics   = metric_set(accuracy)
-                          )
+)
 
 autoplot(tune_results)
 
 
 best_tunes <- select_best(tune_results)
-best_spec <- finalize_model(tune_spec, best_tunes)
+best_spec <- finalize_model(rand_forest_spec, best_tunes)
 
-#Fitting the model 
-final_model <- fit(best_spec, 
-                   churn~., 
-                   train_tbl
-                   )
 
-pred_test <- predict(final_model, new_data = test_tbl,type ="class")
-# #complete one-hot here
-# one_hot_dummy <- dummyVars(
-#   " ~.",
-#   data = (churn_data %>%
-#             select(where(is.factor) & !contains("churn"))
-#   )
-# )
-# 
-# 
-# dummy_df <- data.frame(
-#   predict(
-#     one_hot_dummy,
-#     newdata = (churn_data %>%
-#                  select(where(is.factor) & !contains("churn"))
-#     )
-#   )
-# )
+#Finalizing the model
+final_wflw <- workflow() %>%
+  add_recipe(recipe_spec) %>%
+  add_model(best_spec) %>%
+  fit(train_churn)
 
-# final_data_set <- dummy_df %>% bind_cols(churn_data) %>% #put together numeric with dummied variables
-#   select(!where(is.factor), churn)%>% #remove all non-dummied variables 
-#   
-#   janitor::clean_names() 
-# 
-# 
-# #normalizing numeric data
-# 
-# scaled_ds <- final_data_set %>% 
-#   mutate(
-#     across(where(is.numeric), ~(.x-min(.x))/(max(.x)-min(.x))
-#     )
-#   )
-# 
-# skimr::skim(scaled_ds)
+#add fit resample
+fit_resample <- fit_resamples(
+                            best_spec, 
+                            recipe_spec, 
+                            resamples = tree_folds,
+                            metrics   = metric_set(auc, accuracy)
+                    )
 
+pred_test_prob <- predict(final_wflw, new_data = test_churn,type ="prob")
+
+test_with_preds <- test_churn %>% bind_cols(pred_test_prob) 
+eval_roc_auc <- roc_curve(test_with_preds, truth = churn, estimate = .pred_Yes)
