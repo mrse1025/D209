@@ -1,8 +1,10 @@
 ---
-title: "Improving Churn Model"
+title: "Improving Churn Model with Random Forest"
 author: "Victoria Espinola"
 date: "2022-10-21"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE, warning= FALSE}
@@ -13,36 +15,37 @@ knitr::opts_chunk$set(
     paged.print = FALSE
 )
 ```
-###### A1. According to the churn dictionary, the churn rate for telecommunications customers can be as high as 25% per year and can cost up to 10 times as much to acquire a new customers than retain an existing customer. A KNN model was applied to the customer churn data set in task one and had an accuracy rate of 84% of the churn. While this anaylsis was enough to support moving forward with early intervention to retain at risk customers, this analysis will seek to improve upon this classification analysis by appling a random forest model.
+###### A1. According to the churn data dictionary, the churn rate for telecommunications customers can be as high as 25% per year and it can cost up to 10 times as much to acquire a new customer than retaining an existing customer. A KNN model was applied to the customer churn data set in task one and had an accuracy rate of 84% for the outcome churn. While this anaylsis was enough to support moving forward with early intervention to retain at-risk customers, the goal of this analysis is to improve upon that classification analysis by appling a random forest model. 
 
-###### A2. The goal of this analysis is to improve upon the KNN model and find an appropriate random forest model that will have a better accuracy than the KNN model. If the random forest model improves in its accuracy, then this model will be given to stakeholders to isolate target customers for intervention. 
+###### A2. The goal of this analysis is to improve upon the KNN model and create a random forest model that will have a better accuracy than the KNN model. If the random forest model has an accuracy higher than 84%, then it will be an improvement on the KNN model. The final model will be given to stakeholders to isolate target customers for intervention and show the predictor variables that have the most effect on churn outcome.  
 
-###### B1. A random forest method trains a model based on the training set that has been subsetted. The collection of models is then put together as an ensemble and the weaker models are able to learing from stronger model that classify the data more accurately.  One way to improve the ensemble is to include hyperparameter tuning methods so that the model can improve on its classification accuracy. It is expected that the random forest will perform better then the KNN model since it has a bootstrapping method that will use a majority vote from many models and not a majority vote from similary points as seen with KNN models.
+###### B1. A random forest method trains a model based on creating individual decision trees from randomly selected subsets of the predictor variables from the training data. The collection of trees is then put together as an ensemble and the majority class is used to generate the predictive class. The ensemble can be improved upon by tuning the  hyperparameters, and thus can increase the classification accuracy (Applied Predictive Modeling, M. Kuhn, section 8.5). According to section 4 of Machine Learning with Tree-Based Models in R, random forest is a good "out-of-the-box" performer, hence, the final model is expected to perform better than the KNN model from task 1 (DataCamp).
 
-###### B2. One assumption of the random forest method is that low variance variables need to be removed to avoid overfitting the model. 
+###### B2. One assumption of the random forest method is that low variance variables need to be removed to avoid overfitting the model (Datacamp, Machine Learning with Caret, M. Kuhn). One way to recongnize overfitting is observing that the model has a low in sample error but high out of sample error.  
 
-###### B3. The libaries used for this analysis are listed below with comments on how they are used in the anaylsis.  
+###### B3. The libaries used for this analysis include, tidyverse, tidymodels, janitor, and vip. These libraries were used  because they contain the function for reading in the data, cleaning and preparing the data, creating a recipe, analyzing the data, and assessing the models performance. The list of libraries are given in the code below with comments on how they contributed to the anaylsis.  
 
 ```{r}
-library(tidyverse)
-library(tidymodels)
-source("cleaner_copy.R")
+library(tidyverse) #tidyverse meta package containing useful tools for preparation, dplyr, ggplot2, and readr
+library(tidymodels) #tidymodels meta package containing useful tools for the analysis, such as tunes, yardstick, recipes, workflow and dials. 
+library(janitor) #janitor cleans names 
+library(vip) #vip is used to find the most important variables. 
 ```
 
-###### C1. In order to use the randmon forest method for classification, the data must have all low variance variables removed, so that the model will not overfit the data. While tree models are robust to outliers and can model non-linear data, these characteristics left in the data can increase the likilhood of overfitting the data as the model tend to learn the noise within the data set. Therefore the three main goals of the preparation are 1) removing all low variance variables, 2) normalize the observations using a log transform, and 3) dummy nominal variables using one-hot encoding. 
+###### C1. In order to use the random forest method for classification, the data must have all low variance variables removed, helping the model not overfit the data. While tree models are robust to outliers, when left in the data set, they can increase the likilhood of overfitting the data as the model tend to learn the noise within the data set. Therefore, the three main goals of the preparation are 1) removing all low variance variables, 2) normalize the observations using step normalize, and 3) impute all missing values with the mean. 
 
-###### C2. In the following chunk of code, the data is brought in, a seed is created for reproducibility, the data is split into training and testing set, and finally the data preparation steps are defined. The main goal of this preparation is to removed the low variance observations that are highly sparse and unbalanced. 
+###### C2. Since one of the goals of the data preparation steps include removing all zero variance variables, the entire given data set will be used to classify churn outcomes. All calculations needed for data preparation were completed with the recipe function from tidymodels and no manual calculations were computed. Additionally, the comments show the purpose for each step of the recipe.   
 
-###### C3. The code below shows the steps for data preparation, the comments annotates what is being completed in each step. 
+###### C3. The code below shows the steps for data preparation, the comments annotate what is being completed in each step. The process for data preparation can be summed up as, bringing the data set and changing character variables to factor variables, creating a seed for reproducibility, splitting the data into training and testing sets, and finally creating the recipe for feature engineering and data prep as seen in the comments. The code concludes with a summary of all the variables and their distrubutions after recipe steps were applied. 
 
 ```{r, echo=TRUE}
 churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
-  janitor::clean_names() %>%
-  churn_cleaning()
+  mutate_if(is.character,as.factor) %>%                     #bringing in the data, changing nomial variables as factors
+  janitor::clean_names()                                    #standardizing naming conventions
 
 # Create training and testing splits ----
-set.seed(123)
-splits <- initial_split(churn_data, prop = 0.80)
+set.seed(123) 
+splits <- initial_split(churn_data, prop = 0.80, strata = churn)  #initial data split, strata ensures each set will have the                                                                      same proportion of churn observations. 
 
 train_churn <- training(splits)
 test_churn  <- testing(splits)
@@ -59,20 +62,19 @@ recipe_spec <- recipe(churn ~., data = train_churn ) %>%
   #group together all nominal predictors into an other category when they are retained from low variance, 
   #but account for 0.5% of the data
   step_other(all_nominal_predictors(),threshold = 0.005) %>%
-  #normalize the numeric data with a log transform; this step is important to reduce any outliers in the data set. 
-  step_log(all_numeric_predictors(),offset = 1) %>%
-  #dummy the nominal predictors with one-hot encoding method 
-  step_dummy(all_nominal_predictors(), one_hot = TRUE, keep_original_cols = FALSE) 
+  #normalize the numeric data; this step is important to reduce any outliers in the data set. 
+  step_normalize(all_numeric_predictors())
 
 prepped_data <- recipe_spec %>% prep() %>% bake(new_data = churn_data) %>% janitor::clean_names()
 skimr::skim(prepped_data)
 ```
-###### C4. The code below shows the script for creating the csv file to be uploaded for the final submission. 
+
+###### C4. The code below shows the script for creating the csv file with all the data to be uploaded for the final submission. 
 ```{r}
 write.csv(prepped_data, "prepped_data.csv" )
 ```
 
-###### D1. The code below applies the preparation reciepe steps to the split data and outputs the new preppred_train and prepped_test data sets that will be used for analysis.
+###### D1. In the previous chunk of code, the character variables have been converted to factors and the data had an initial 80/20 split with a stratification on the churn outcome. From the initial split the training and testing sets were created. The code below applies the preparation reciepe steps to the split data and outputs the new preppred_train and prepped_test data sets that will be used for analysis. 
 
 ```{r}
 # Prep data, clean the names
@@ -88,59 +90,113 @@ write.csv(prepped_train_data, "prepped_train_data.csv" )
 write.csv(prepped_test_data, "prepped_test_data.csv")
 ```
 
-###### D2. 
+###### D2. The following analysis technique was implemented from the DataCamp course, "Machine Learning with Tree Models, section 4"; start with the spec model with tuning parameters, set up the number of folds, and create a tuning grid, then use the grid results to find the best parameters, in this instance accuracy will be used to assess the best tuned model parameters. Finally, the tuning specs are passed to the model spec to finalize the parameters the model will use when trained. The model accuracy with the finalized hyperparameters will be assessed using  8-fold cross validation on the training set and then if satisfactory the model will be fit on the entire training set.
 
-```{r}
+###### *The following code chunk will not be run during demonstration due to processing time. 
+
+```{r, eval=FALSE}
+#Set tuning parameters for random forest classification.
 rand_forest_spec <- rand_forest(
-                  mtry  = tune(), 
-                  trees = tune(), 
-                  min_n = tune()
-              ) %>%
+  mtry  = tune(), 
+  trees = tune(), 
+  min_n = tune()
+) %>%
   set_mode("classification") %>%
-  set_engine("ranger")
+  set_engine("ranger", importance = "permutation") #needed to create variable importance plot
 
+#set seed for reproducibility for folds and tuning grid because both having a random element.
 set.seed(123)
 
-tree_folds <- vfold_cv(data = prepped_train_data, v = 2)
 #set up tuning grid
-
-
 test_grid <- tidyr::crossing(
-  mtry  = c(2,10), 
-  trees = c(100,1000),
-  min_n = c(1,5)
+  mtry  = 5:8, #best practice is sqrt of number of variables, sqrt(50)~ 7
+  trees = seq(300,600,100), #best practice is 500 trees from ranger parsnip doc.
+  min_n = 9:15 # best practice is value of 10 from ranger parsnip doc.
 )
 
 set.seed(123)
-
+doParallel::registerDoParallel() #improve the time for the model to run. 
 tune_results <- tune_grid(rand_forest_spec, 
-                          churn ~. , 
+                          recipe_spec,
                           resamples = tree_folds,
                           grid      = test_grid,
-                          metrics   = metric_set(accuracy)
+                          metrics   = metric_set(accuracy) #parameters optimized by accuracy.
                           )
+
+#Select best tune results from the tune grid to be put into the final model. 
+best_tunes <- select_best(tune_results)
+#Including tuned specs from best tunes for the final model. 
+best_spec <- finalize_model(rand_forest_spec, best_tunes)
+```
+
+```{r}
+#set seed for tuned results
+set.seed(123)
+#set folds value for resampling
+tree_folds <- vfold_cv(data = train_churn, v = 8, strata = churn)
+
+#visualizing the tune results, to show what will be selected.
+
+hyper_param_list <- read_rds("model_tuning.rds")
+tune_results <- hyper_param_list$tune_results
+best_spec <- hyper_param_list$best_spec
 
 autoplot(tune_results)
 
+#finalizing the model
+final_wflw <- workflow() %>%
+  add_recipe(recipe_spec) %>%
+  add_model(best_spec)  
 
-best_tunes <- select_best(tune_results)
-best_spec <- finalize_model(rand_forest_spec, best_tunes)
+#add fit resample
+fit_resample <- fit_resamples(
+                            final_wflw,
+                            resamples = tree_folds,
+                            metrics   = metric_set(roc_auc, accuracy)
+                    )
 
+#using collect metrics to find the models performance
+collect_metrics(fit_resample, summarize = TRUE)
 ```
+
+###### D3. The following code is used to assess how the tuned model will perform on out of sample data. 
 
 ```{r}
-set.seed(123)
 
-#Fitting the model 
-final_model <- fit(best_spec, 
-                   churn ~., 
-                   prepped_train_data
-                   )
+#full model created from work flow with all best tuning parameters
+full_model <- final_wflw %>%
+  last_fit(splits)
 
-pred_test <- predict(final_model, new_data = prepped_test_data,type ="class")
+#visualizing the final full model. 
+full_model %>% collect_predictions() %>%
+  roc_curve(truth = churn, estimate = .pred_No) %>%
+  autoplot()
+
+#viewing the metrics on the final full model. 
+full_model %>% collect_metrics()
+
+#Returns the workflow and display the most important variables from VIP package. 
+extract_workflow(full_model)%>%
+  extract_fit_parsnip()%>%
+  vip(geom="point",num_features=10)
 ```
 
-```{r}
+###### E1. The prediction model has an accuracy value of 89.3% and a ROC AUC value of 95%. The accuracy of the model reveals that 10.7% of the observations are misclassified. 
 
-```
+###### E2. From the full model using out of sample data, the model has an accuracy value of 88.3% and a ROC AUC value of 94.9%. This means that when given data that the model has not been learned from, the model will misclassify 11.4% of the observations. 
 
+###### E3. One limitation of the analysis technique is that the number of possible tuning parameter combinations that were used were limited by my machines capabilities. Since every combination of parameters needs to be tested by fitting the model to the values, computational time can quickly become very steep. The hyperparameter values were selected by applying best practice metrics from "Tidy Modeling with R" (Kuhn & Silge, 2022) and the R documentation for ranger random forest package. 
+
+###### E4.Overall the random forest model gave an improvement upon the KNN model from task 1. Stakeholders are still encouraged to seek out intervention opportunities that will help to mitigate churn rates. It is also advisable to monitor churn rates based on tenure, monthly charge, contract, bandwidth, case order, streaming movies, streaming tv, internet service and multiple service as these variables were selected by the random forest model as being the most important. 
+
+###### G. Citation
+
+###### 1. Machine Learning with Caret in R: https://app.datacamp.com/learn/courses/machine-learning-with-caret-in-r
+
+###### 2. Machine Learning with Tree Models in R: https://app.datacamp.com/learn/courses/machine-learning-with-tree-based-models-in-r
+
+###### 3. rand_forest: Random forest in parsnip: A Common API to Modeling and Analysis Functions Max Kuhn https://rdrr.io/cran/parsnip/man/rand_forest.html
+
+###### 4. Tidy Modeling with R. Silge. https://www.tmwr.org/
+
+###### 5. Applied Predictive Modeling. Kuhn. http://appliedpredictivemodeling.com/

@@ -1,18 +1,15 @@
-library(tidyr)
+library(tidyverse)
 library(tidymodels)
-library(class)
 library(janitor)
-library(caret)
-library(pROC)
-source("cleaner_copy.R")
+library(vip)
 
 churn_data <- read.csv("churn_clean.csv", header = TRUE) %>% 
-  janitor::clean_names() %>%
-  churn_cleaning() 
-#recipe goes here
+  mutate_if(is.character,as.factor) %>%
+  janitor::clean_names()
+ 
 # Create training and testing splits ----
 set.seed(123)
-splits <- initial_split(churn_data, prop = 0.80)
+splits <- initial_split(churn_data, prop = 0.80, strata = churn)
 
 train_churn <- training(splits)
 test_churn  <- testing(splits)
@@ -29,10 +26,8 @@ recipe_spec <- recipe(churn ~., data = train_churn ) %>%
   #group together all nominal predictors into an other category when they are retained from low variance, 
   #but account for 0.5% of the data
   step_other(all_nominal_predictors(),threshold = 0.005) %>%
-  #normalize the numeric data with a log transform; this step is important to reduce any outliers in the data set. 
-  step_log(all_numeric_predictors(),offset = 1)
-  #dummy the nominal predictors with one-hot encoding method 
-  #step_dummy(all_nominal_predictors(), one_hot = TRUE, keep_original_cols = FALSE) 
+  #normalize the numeric data; this step is important to reduce any outliers in the data set. 
+  step_normalize(all_numeric_predictors())
 
 #Full_prepped_data
 prepped_data <- recipe_spec %>% prep() %>% bake(new_data = churn_data) %>% janitor::clean_names()
@@ -45,22 +40,22 @@ rand_forest_spec <- rand_forest(
   min_n = tune()
 ) %>%
   set_mode("classification") %>%
-  set_engine("ranger")
+  set_engine("ranger", importance = "permutation")
 
 set.seed(123)
 
-tree_folds <- vfold_cv(data = train_churn, v = 2)
+tree_folds <- vfold_cv(data = train_churn, v = 8, strata = churn)
 #set up tuning grid
 
 
 test_grid <- tidyr::crossing(
-  mtry  = 1:10, 
-  trees = seq(100,1000,100),
-  min_n = seq(1,5,1)
+  mtry  = 5:7,
+  trees = seq(10,30,10),
+  min_n = 1:3
 )
 
 set.seed(123)
-
+doParallel::registerDoParallel()
 tune_results <- tune_grid(rand_forest_spec, 
                           recipe_spec,
                           resamples = tree_folds,
@@ -78,18 +73,27 @@ best_spec <- finalize_model(rand_forest_spec, best_tunes)
 #Finalizing the model
 final_wflw <- workflow() %>%
   add_recipe(recipe_spec) %>%
-  add_model(best_spec) %>%
-  fit(train_churn)
+  add_model(best_spec)  
 
 #add fit resample
 fit_resample <- fit_resamples(
-                            best_spec, 
-                            recipe_spec, 
+                            final_wflw,
                             resamples = tree_folds,
-                            metrics   = metric_set(auc, accuracy)
+                            metrics   = metric_set(roc_auc, accuracy)
                     )
 
-pred_test_prob <- predict(final_wflw, new_data = test_churn,type ="prob")
 
-test_with_preds <- test_churn %>% bind_cols(pred_test_prob) 
-eval_roc_auc <- roc_curve(test_with_preds, truth = churn, estimate = .pred_Yes)
+collect_metrics(fit_resample, summarize = TRUE)
+
+full_model <- final_wflw %>%
+  last_fit(splits)
+
+full_model %>% collect_predictions() %>%
+  roc_curve(truth = churn, estimate = .pred_No) %>%
+  autoplot()
+
+full_model %>% collect_metrics()
+
+extract_workflow(full_model)%>%
+  extract_fit_parsnip()%>%
+  vip(geom="point",num_features=10)
